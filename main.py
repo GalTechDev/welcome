@@ -5,6 +5,8 @@ Lib = Lib_UsOS()
 welcome_message = """
 Bienvenue {}, dans le serveur
 
+Je t'invite à choisir ta classe dans le salon #roles
+
 Si tu as la moindre question, n'hésite pas a demander de l'aide
 """
 
