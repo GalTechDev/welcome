@@ -1,13 +1,15 @@
-from system.lib import *
+from understar.system import lib
 import discord
-from PIL import Image
-Lib = App()
+from PIL import Image, ImageDraw, ImageOps, ImageFont
+Lib = lib.App()
 
 welcome_message = """
 Bienvenue {}, dans le serveur
 
 Si tu as la moindre question, n'hésite pas a demander de l'aide
 """
+
+
 
 # -------------------------------- Event --------------------------------------
 
@@ -31,23 +33,38 @@ async def on_member_remove(member: discord.Member):
 async def send_banner(member: discord.Member):
     # Ouvre l'image template.png
     image = Image.open(Lib.save.get_full_path(name='template.png'))
-
+    draw = ImageDraw.Draw(image)
+    
     # Télécharge l'avatar de l'utilisateur qui a rejoint le serveur
     avatar_data = await member.avatar.read()
     Lib.save.write(name=f"{member.id}_avatar.png", path="avatar", data=avatar_data, binary_mode=True)
 
     # Ouvre l'avatar téléchargé
-    avatar = Image.open(Lib.save.get_full_path(name=f"{member.id}_avatar.png", path="avatar"))
+    avatar = Image.open(Lib.save.get_full_path(name=f"{member.id}_avatar.png", path="avatar")).convert('RGBA')
 
     # Redimensionne l'avatar à la taille souhaitée
-    avatar = avatar.resize((200, 200))
+    avatar = avatar.resize((200, 200), Image.ANTIALIAS)
+    mask = Image.new('L', avatar.size, 0)
+    draw_mask = ImageDraw.Draw(mask)
+    draw_mask.ellipse((0, 0, avatar.width, avatar.height), fill=255)
+
+    # Application du masque à l'avatar
+    avatar = ImageOps.fit(avatar, mask.size, centering=(0.5, 0.5))
+    avatar.putalpha(mask)
 
     # Calcule les coordonnées du centre de l'image
     center_x = (image.width - avatar.width) // 2
     center_y = (image.height - avatar.height) // 2
 
     # Ajoute l'avatar au centre de l'image
-    image.paste(avatar, (center_x, center_y))
+    image.paste(avatar, (center_x, center_y), avatar)
+    
+    # Ajout du nom de l'utilisateur en bas de l'image
+    font = ImageFont.truetype('arial.ttf', 24)
+    text_width, text_height = draw.textsize(member.name, font=font)
+    text_x = (image.width - text_width) // 2
+    text_y = image.height - text_height - 10
+    draw.text((text_x, text_y), member.name, font=font, fill=(255, 255, 255))
 
     # Enregistre l'image modifiée avec le nom de l'utilisateur
     image.save(f'{member.id}_banner.png')
